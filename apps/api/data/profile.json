@@ -1,0 +1,19 @@
+{
+  "name": "Rhea Kapoor",
+  "email": "rhea@example.com",
+  "phone": "+91 98765 43210",
+  "birthday": "1998-08-14",
+  "memberSince": "2026-01-18",
+  "preferences": {
+    "categories": ["rings", "earrings"],
+    "metalColors": ["Rose Gold"],
+    "occasions": ["Everyday", "Gift"]
+  },
+  "address": {
+    "label": "Home",
+    "line1": "24 Garden Avenue",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "pincode": "560001"
+  }
+}
