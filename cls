@@ -1,6 +1,6 @@
 import cors from "cors";
 import express from "express";
-// import helmet from "helmet";
+import helmet from "helmet";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { defaultProfile, products, type Profile } from "./data.js";
@@ -13,7 +13,7 @@ const carts = new Map<string, Map<string, { productId: string; size: string; qua
 const appointments: Array<Record<string, unknown>> = [];
 const profiles = new Map<string, Profile>();
 
-// app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors());
 app.use(express.json({ limit: "200kb" }));
 
@@ -189,76 +189,4 @@ app.get("/api/v1/cart", (request, response) => {
   const lines = [...(carts.get(owner(request)) || new Map()).values()].map((line) => ({
     ...line,
     product: products.find((product) => product.id === line.productId)
-  }));
-  const subtotal = lines.reduce((sum, line) => sum + (line.product?.price || 0) * line.quantity, 0);
-  send(response, { items: lines, subtotal, shipping: 0, total: subtotal });
-});
-
-app.post("/api/v1/cart/items", (request, response) => {
-  const parsed = z.object({ productId: z.string(), size: z.string(), quantity: z.number().int().min(1).max(5).default(1) }).safeParse(request.body);
-  if (!parsed.success) return response.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Choose an available size." } });
-  const id = owner(request);
-  const cart = carts.get(id) || new Map();
-  const key = `${parsed.data.productId}:${parsed.data.size}`;
-  cart.set(key, parsed.data);
-  carts.set(id, cart);
-  return response.status(201).json({ data: parsed.data, error: null });
-});
-
-app.patch("/api/v1/cart/items/:key", (request, response) => {
-  const cart = carts.get(owner(request)) || new Map();
-  const line = cart.get(decodeURIComponent(request.params.key));
-  if (line) line.quantity = Math.min(5, Math.max(1, Number(request.body.quantity || 1)));
-  return send(response, line);
-});
-
-app.delete("/api/v1/cart/items/:key", (request, response) => {
-  const cart = carts.get(owner(request)) || new Map();
-  cart.delete(decodeURIComponent(request.params.key));
-  return send(response, { removed: true });
-});
-
-app.get("/api/v1/appointments/availability", (request, response) => {
-  const date = String(request.query.date || new Date().toISOString().slice(0, 10));
-  const slots = ["10:30", "12:00", "14:30", "16:00", "17:30"].map((time) => ({
-    time,
-    available: !appointments.some((appointment) => appointment.date === date && appointment.time === time)
-  }));
-  send(response, slots);
-});
-
-app.post("/api/v1/appointments", (request, response) => {
-  const schema = z.object({
-    type: z.enum(["virtual", "store"]),
-    date: z.string(),
-    time: z.string(),
-    name: z.string().min(2),
-    email: z.string().email(),
-    phone: z.string().min(8),
-    occasion: z.string().optional(),
-    productId: z.string().optional()
-  });
-  const parsed = schema.safeParse(request.body);
-  if (!parsed.success) return response.status(400).json({ data: null, error: { code: "VALIDATION_ERROR", message: "Please complete all required details." } });
-  if (appointments.some((appointment) => appointment.date === parsed.data.date && appointment.time === parsed.data.time)) {
-    return response.status(409).json({ data: null, error: { code: "SLOT_UNAVAILABLE", message: "That time was just booked. Please choose another." } });
-  }
-  const appointment = { id: `APT-${String(appointments.length + 1).padStart(4, "0")}`, ownerId: owner(request), ...parsed.data, status: "confirmed", createdAt: new Date().toISOString() };
-  appointments.push(appointment);
-  return response.status(201).json({ data: appointment, error: null });
-});
-
-app.use((_request, response) => response.status(404).json({ data: null, error: { code: "NOT_FOUND", message: "Route not found." } }));
-
-async function start() {
-  if (process.env.MONGODB_URI) {
-    await mongoose.connect(process.env.MONGODB_URI);
-    if (await ProductModel.countDocuments() === 0) await ProductModel.insertMany(products);
-  }
-  app.listen(port, () => console.log(`Aurelia API running at http://localhost:${port}`));
-}
-
-start().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+  }))
